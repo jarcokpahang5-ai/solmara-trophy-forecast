@@ -103,6 +103,20 @@ def parse_time(s: str) -> datetime:
     return datetime.fromisoformat(s.replace("Z", "+00:00"))
 
 
+def rate_at(read: dict, i: int):
+    """Rate for trophy i in one read, or None if the read lacks it.
+
+    A read's rates list can be shorter than the trophy list (a trophy
+    added to the page after that read, or a truncated read): a missing
+    entry is no observation, the same as an explicit null, not a reason
+    to crash the whole case.
+    """
+    rates = read.get("rates") or []
+    if i >= len(rates):
+        return None
+    return rates[i]
+
+
 def ols(xs, ys):
     """Least squares y ~ a + b*x. Returns (a, b, residuals)."""
     n = len(xs)
@@ -155,7 +169,7 @@ def forecast_case(case: dict, name: str) -> dict:
         states = []
         prev = None
         for read in history:
-            rate = read["rates"][i]
+            rate = rate_at(read, i)
             if rate is None:
                 continue
             key = (read["players_tracked"], rate)
@@ -232,8 +246,9 @@ def forecast_case(case: dict, name: str) -> dict:
     for i in range(len(trophies)):
         rate = None
         for read in reversed(history):
-            if read["rates"][i] is not None:
-                rate = float(read["rates"][i])
+            rate = rate_at(read, i)
+            if rate is not None:
+                rate = float(rate)
                 break
         last_rates.append(rate)
     for i, rate in enumerate(last_rates):
